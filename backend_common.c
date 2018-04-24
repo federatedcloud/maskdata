@@ -714,6 +714,7 @@ int read_psrdata_mask(float *fdata, int numspect, struct spectra_info *s,
             else
                 break;
         }
+		fclose(fout); //AB new
         return numsubints * s->spectra_per_subint;
     } else {
         return 0;
