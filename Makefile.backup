@@ -1,4 +1,5 @@
-#  Makefile for maskdata (based on PRESTO)
+#  Makefile for PRESTO
+#   by Scott M. Ransom
 
 # OS type
 OS = Linux
@@ -18,20 +19,18 @@ else
 	LIBCMD = -dynamiclib
 endif
 
-PRESTO = ./
+# How to link with some needed libraries of PGPLOT
+X11LINK := $(shell pkg-config --libs x11)
+PNGLINK := $(shell pkg-config --libs libpng)
 
-## How to link with some needed libraries of PGPLOT
-#X11LINK := $(shell pkg-config --libs x11)
-#PNGLINK := $(shell pkg-config --libs libpng)
-#
-## Include and link information for PGPLOT v5.X (including shared libs!)
-## Typically you need to have your PGPLOT_DIR environment variable set
-#PGPLOTINC = -I$(PGPLOT_DIR)
-#PGPLOTLINK = -L$(PGPLOT_DIR) -lcpgplot -lpgplot $(X11LINK) $(PNGLINK)
-#
-## Include and link information for the FFTW 3.X single-precision library
-#FFTINC := $(shell pkg-config --cflags fftw3f)
-#FFTLINK := $(shell pkg-config --libs fftw3f)
+# Include and link information for PGPLOT v5.X (including shared libs!)
+# Typically you need to have your PGPLOT_DIR environment variable set
+PGPLOTINC = -I$(PGPLOT_DIR)
+PGPLOTLINK = -L$(PGPLOT_DIR) -lcpgplot -lpgplot $(X11LINK) $(PNGLINK)
+
+# Include and link information for the FFTW 3.X single-precision library
+FFTINC := $(shell pkg-config --cflags fftw3f)
+FFTLINK := $(shell pkg-config --libs fftw3f)
 
 # Include and link information for the GLIB 2.0 library
 GLIBINC := $(shell pkg-config --cflags glib-2.0)
@@ -42,7 +41,7 @@ CFITSIOINC := $(shell pkg-config --cflags cfitsio)
 CFITSIOLINK := $(shell pkg-config --libs cfitsio)
 
 # The standard PRESTO libraries to link into executables
-PRESTOLINK = $(CFITSIOLINK) -L$(PRESTO)/lib -lpresto #$(FFTLINK)
+PRESTOLINK = $(CFITSIOLINK) -L$(PRESTO)/lib -lpresto $(FFTLINK)
 
 CC = gcc
 #CC = clang-3.6
@@ -55,9 +54,7 @@ USEOPENMP = true
 USEPROFILE = false
 
 # Very recent Intel CPUs might see a few percent speedup using -mavx
-#CFLAGS = -I$(PRESTO)/include $(GLIBINC) $(CFITSIOINC) $(PGPLOTINC) $(FFTINC) \
-
-CFLAGS = -I$(PRESTO)/include $(GLIBINC) $(CFITSIOINC) \
+CFLAGS = -I$(PRESTO)/include $(GLIBINC) $(CFITSIOINC) $(PGPLOTINC) $(FFTINC) \
 	-DUSEFFTW -DUSEMMAP -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 \
 	-g -Wall -W -fPIC -O3 -ffast-math
 CLINKFLAGS = $(CFLAGS)
@@ -103,8 +100,8 @@ else
 	LINKCOMMAND = ar rcs
 endif
 
-## Add to the search path for the executables
-#VPATH = ../lib:../bin
+# Add to the search path for the executables
+VPATH = ../lib:../bin
 
 # When modifying the CLIG files, the is the location of the clig binary
 CLIG = clig
@@ -128,8 +125,7 @@ PRESTOOBJS = amoeba.o atwood.o barycenter.o birdzap.o cand_output.o\
 	twopass_real_inv.o vectors.o multifiles.o mask.o\
 	fitsfile.o hget.o hput.o imio.o djcl.o range_parse.o
 
-#INSTRUMENTOBJS = backend_common.o zerodm.o sigproc_fb.o psrfits.o
-INSTRUMENTOBJS = backend_common.o zerodm.o psrfits.o
+INSTRUMENTOBJS = backend_common.o zerodm.o sigproc_fb.o psrfits.o
 
 # Use old header reading stuff for readfile
 READFILEOBJS = $(INSTRUMENTOBJS) multibeam.o bpp.o spigot.o \
@@ -149,8 +145,7 @@ BINARIES = makedata makeinf mjd2cal realfft quicklook\
 #	dump_spigot_zerolag spigot2filterbank\
 #	spigotSband2filterbank GBT350filterbank\
 
-#all: libpresto slalib binaries
-all: libpresto binaries
+all: libpresto slalib binaries
 
 # Default indentation is K&R style with no-tabs,
 # an indentation level of 4 (default), and a line-length of 85
@@ -161,10 +156,10 @@ indent:
 prep:
 	touch *_cmd.c
 
-#makewisdom:
-#	$(CC) $(CLINKFLAGS) -o $@ makewisdom.c $(FFTLINK)
-#	./makewisdom
-#	cp fftw_wisdom.txt $(PRESTO)/lib
+makewisdom:
+	$(CC) $(CLINKFLAGS) -o $@ makewisdom.c $(FFTLINK)
+	./makewisdom
+	cp fftw_wisdom.txt $(PRESTO)/lib
 
 timetest:
 	$(CC) -o $@ timetest.c
@@ -176,27 +171,27 @@ libpresto: libpresto$(LIBSUFFIX)
 libpresto$(LIBSUFFIX): $(PRESTOOBJS)
 	$(LINKCOMMAND) $(PRESTO)/lib/$@ $(PRESTOOBJS)
 
-#slalib: libsla$(LIBSUFFIX)
-#	cd slalib ; $(FC) -o sla_test sla_test.f -fno-second-underscore -L$(PRESTO)/lib -lsla
-#	slalib/sla_test
-#
-#libsla$(LIBSUFFIX):
-#	cd slalib ; $(FC) $(FFLAGS) -fno-second-underscore -c -I. *.f *.F
-#	rm slalib/sla_test.o
-#	cd slalib ; $(FC) $(LIBCMD) -o $(PRESTO)/lib/libsla$(LIBSUFFIX) -fno-second-underscore *.o
+slalib: libsla$(LIBSUFFIX)
+	cd slalib ; $(FC) -o sla_test sla_test.f -fno-second-underscore -L$(PRESTO)/lib -lsla
+	slalib/sla_test
+
+libsla$(LIBSUFFIX):
+	cd slalib ; $(FC) $(FFLAGS) -fno-second-underscore -c -I. *.f *.F
+	rm slalib/sla_test.o
+	cd slalib ; $(FC) $(LIBCMD) -o $(PRESTO)/lib/libsla$(LIBSUFFIX) -fno-second-underscore *.o
 
 binaries: $(BINARIES)
 
-#mpi: mpiprepsubband
-#
-#mpiprepsubband_utils.o: mpiprepsubband_utils.c
-#	mpicc $(CLINKFLAGS) -c mpiprepsubband_utils.c
-#
-#mpiprepsubband.o: mpiprepsubband.c
-#	mpicc $(CLINKFLAGS) -c mpiprepsubband.c
-#
-#mpiprepsubband: mpiprepsubband_cmd.c mpiprepsubband_cmd.o mpiprepsubband_utils.o mpiprepsubband.o $(INSTRUMENTOBJS) libpresto
-#	mpicc $(CLINKFLAGS) -o $(PRESTO)/bin/$@ mpiprepsubband_cmd.o mpiprepsubband_utils.o mpiprepsubband.o $(INSTRUMENTOBJS) $(PRESTOLINK) -lcfitsio -lm
+mpi: mpiprepsubband
+
+mpiprepsubband_utils.o: mpiprepsubband_utils.c
+	mpicc $(CLINKFLAGS) -c mpiprepsubband_utils.c
+
+mpiprepsubband.o: mpiprepsubband.c
+	mpicc $(CLINKFLAGS) -c mpiprepsubband.c
+
+mpiprepsubband: mpiprepsubband_cmd.c mpiprepsubband_cmd.o mpiprepsubband_utils.o mpiprepsubband.o $(INSTRUMENTOBJS) libpresto
+	mpicc $(CLINKFLAGS) -o $(PRESTO)/bin/$@ mpiprepsubband_cmd.o mpiprepsubband_utils.o mpiprepsubband.o $(INSTRUMENTOBJS) $(PRESTOLINK) -lcfitsio -lm
 
 accelsearch: accelsearch_cmd.c accelsearch_cmd.o accel_utils.o accelsearch.o zapping.o libpresto
 	$(CC) $(CLINKFLAGS) $(OMPFLAGS) -o $(PRESTO)/bin/$@ accelsearch_cmd.o accel_utils.o accelsearch.o zapping.o $(PRESTOLINK) $(GLIBLINK) -lm
