@@ -1,3 +1,8 @@
+# vim ignores
+*.swp
+*.swo
+*~
+
 # Prerequisites
 *.d
 
