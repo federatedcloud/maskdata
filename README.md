@@ -38,7 +38,7 @@ This contains the functions used for reading in pulsar data.  The main
 change we make is to add "read_psrdata_mask()".  This function is a 
 copy of "read_psrdata()", but with a write step that writes the masked 
 data to file.  The only changes are for opening and writing this file. 
-The file name is hard-coded as "raw_data_with_mask.fits".  
+The file name is hard-coded as "raw_data_with_mask.fil".  
 
 
 ### `backend_common.h`
