@@ -632,9 +632,9 @@ int read_psrdata_mask(float *fdata, int numspect, struct spectra_info *s,
 
     //Open masked raw data file (NEW)
     if (firsttime)
-	fout=fopen("raw_data_with_mask.fits", "w");
+	fout=fopen("raw_data_with_mask.fil", "w");
     else
-	fout=fopen("raw_data_with_mask.fits", "a"); 
+	fout=fopen("raw_data_with_mask.fil", "a"); 
 
     *nummasked = 0;
     if (firsttime) {
