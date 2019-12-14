@@ -3,22 +3,24 @@
 # OS type
 OS = Linux
 
-UNAME = $(shell uname)
-ifeq ($(UNAME),Darwin)
-OS = OSX
-endif
+#UNAME = $(shell uname)
+#ifeq ($(UNAME),Darwin)
+#OS = OSX
+#endif
 
-# Linux is the first choice
-ifeq ($(OS),Linux)
-	LIBSUFFIX = .so
-	LIBCMD = -shared
-# else assume Darwin (i.e. OSX)
-else
-	LIBSUFFIX = .dylib
-	LIBCMD = -dynamiclib
-endif
+## Linux is the first choice
+#ifeq ($(OS),Linux)
+#	LIBSUFFIX = .so
+#	LIBCMD = -shared
+## else assume Darwin (i.e. OSX)
+#else
+#	LIBSUFFIX = .dylib
+#	LIBCMD = -dynamiclib
+#endif
+LIBSUFFIX = .so
+LIBCMD = -shared
 
-PRESTO = ./
+BASE = ./
 
 ## How to link with some needed libraries of PGPLOT
 #X11LINK := $(shell pkg-config --libs x11)
@@ -42,7 +44,7 @@ CFITSIOINC := $(shell pkg-config --cflags cfitsio)
 CFITSIOLINK := $(shell pkg-config --libs cfitsio)
 
 # The standard PRESTO libraries to link into executables
-PRESTOLINK = $(CFITSIOLINK) -L$(PRESTO)/lib -lpresto #$(FFTLINK)
+BASELINK = $(CFITSIOLINK) -L$(BASE)/lib -lpresto #$(FFTLINK)
 
 CC = gcc
 #CC = clang-3.6
@@ -51,13 +53,13 @@ FC = gfortran
 # Set this to true if you want to use OpenMP.  false otherwise
 USEOPENMP = true
 
-# Set this to true if you want to profile.
-USEPROFILE = false
+## Set this to true if you want to profile.
+#USEPROFILE = false
 
 # Very recent Intel CPUs might see a few percent speedup using -mavx
-#CFLAGS = -I$(PRESTO)/include $(GLIBINC) $(CFITSIOINC) $(PGPLOTINC) $(FFTINC) \
+#CFLAGS = -I$(BASE)/include $(GLIBINC) $(CFITSIOINC) $(PGPLOTINC) $(FFTINC) \
 
-CFLAGS = -I$(PRESTO)/include $(GLIBINC) $(CFITSIOINC) \
+CFLAGS = -I$(BASE)/include $(GLIBINC) $(CFITSIOINC) \
 	-DUSEFFTW -DUSEMMAP -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 \
 	-g -Wall -W -fPIC -O3 -ffast-math
 CLINKFLAGS = $(CFLAGS)
@@ -90,18 +92,19 @@ ifeq ($(USEOPENMP),true)
 	endif
 endif
 
-# Add flags we need for profiling (including making a static libpresto)
-ifeq ($(USEPROFILE),true)
-	CFLAGS += -pg
-	FFLAGS += -pg
-	LIBSUFFIX = .a
-endif
+## Add flags we need for profiling (including making a static libpresto)
+#ifeq ($(USEPROFILE),true)
+#	CFLAGS += -pg
+#	FFLAGS += -pg
+#	LIBSUFFIX = .a
+#endif
 
-ifeq ($(LIBSUFFIX),.so)
-	LINKCOMMAND = $(CC) $(LIBCMD) $(OMPFLAGS) $(FFTLINK) -o
-else
-	LINKCOMMAND = ar rcs
-endif
+#ifeq ($(LIBSUFFIX),.so)
+#	LINKCOMMAND = $(CC) $(LIBCMD) $(OMPFLAGS) $(FFTLINK) -o
+#else
+#	LINKCOMMAND = ar rcs
+#endif
+LINKCOMMAND = $(CC) $(LIBCMD) $(OMPFLAGS) -o
 
 ## Add to the search path for the executables
 #VPATH = ../lib:../bin
@@ -116,7 +119,7 @@ CLIG = clig
 	mv ../clig/$*_cmd.c .
 	cp ../clig/$*.1 ../docs/
 
-PRESTOOBJS = amoeba.o atwood.o barycenter.o birdzap.o cand_output.o\
+#OBJS = amoeba.o atwood.o barycenter.o birdzap.o cand_output.o\
 	characteristics.o cldj.o chkio.o corr_prep.o corr_routines.o\
 	correlations.o database.o dcdflib.o dispersion.o\
 	fastffts.o fftcalls.o fminbr.o fold.o fresnl.o ioinf.o\
@@ -128,6 +131,8 @@ PRESTOOBJS = amoeba.o atwood.o barycenter.o birdzap.o cand_output.o\
 	twopass_real_inv.o vectors.o multifiles.o mask.o\
 	fitsfile.o hget.o hput.o imio.o djcl.o range_parse.o
 
+OBJS = vectors.o fitsfile.o
+
 #INSTRUMENTOBJS = backend_common.o zerodm.o sigproc_fb.o psrfits.o
 INSTRUMENTOBJS = backend_common.o zerodm.o psrfits.o
 
@@ -137,7 +142,7 @@ READFILEOBJS = $(INSTRUMENTOBJS) multibeam.o bpp.o spigot.o \
 
 PLOT2DOBJS = powerplot.o xyline.o
 
-BINARIES = makedata makeinf mjd2cal realfft quicklook\
+#BINARIES = makedata makeinf mjd2cal realfft quicklook\
 	search_bin swap_endian prepdata maskdata\
 	check_parkes_raw bary shiftdata dftfold\
 	patchdata readfile toas2dat taperaw\
@@ -146,8 +151,8 @@ BINARIES = makedata makeinf mjd2cal realfft quicklook\
 	psrorbit window plotbincand prepfold show_pfd\
 	rfifind zapbirds explorefft exploredat\
 	weight_psrfits fitsdelrow fitsdelcol psrfits_dumparrays
-#	dump_spigot_zerolag spigot2filterbank\
-#	spigotSband2filterbank GBT350filterbank\
+
+BINARIES = maskdata
 
 #all: libpresto slalib binaries
 all: libpresto binaries
@@ -164,7 +169,7 @@ prep:
 #makewisdom:
 #	$(CC) $(CLINKFLAGS) -o $@ makewisdom.c $(FFTLINK)
 #	./makewisdom
-#	cp fftw_wisdom.txt $(PRESTO)/lib
+#	cp fftw_wisdom.txt $(BASE)/lib
 
 timetest:
 	$(CC) -o $@ timetest.c
@@ -173,17 +178,17 @@ timetest:
 
 libpresto: libpresto$(LIBSUFFIX)
 
-libpresto$(LIBSUFFIX): $(PRESTOOBJS)
-	$(LINKCOMMAND) $(PRESTO)/lib/$@ $(PRESTOOBJS)
+libpresto$(LIBSUFFIX): $(OBJS)
+	$(LINKCOMMAND) $(BASE)/lib/$@ $(OBJS)
 
 #slalib: libsla$(LIBSUFFIX)
-#	cd slalib ; $(FC) -o sla_test sla_test.f -fno-second-underscore -L$(PRESTO)/lib -lsla
+#	cd slalib ; $(FC) -o sla_test sla_test.f -fno-second-underscore -L$(BASE)/lib -lsla
 #	slalib/sla_test
 #
 #libsla$(LIBSUFFIX):
 #	cd slalib ; $(FC) $(FFLAGS) -fno-second-underscore -c -I. *.f *.F
 #	rm slalib/sla_test.o
-#	cd slalib ; $(FC) $(LIBCMD) -o $(PRESTO)/lib/libsla$(LIBSUFFIX) -fno-second-underscore *.o
+#	cd slalib ; $(FC) $(LIBCMD) -o $(BASE)/lib/libsla$(LIBSUFFIX) -fno-second-underscore *.o
 
 binaries: $(BINARIES)
 
@@ -196,161 +201,161 @@ binaries: $(BINARIES)
 #	mpicc $(CLINKFLAGS) -c mpiprepsubband.c
 #
 #mpiprepsubband: mpiprepsubband_cmd.c mpiprepsubband_cmd.o mpiprepsubband_utils.o mpiprepsubband.o $(INSTRUMENTOBJS) libpresto
-#	mpicc $(CLINKFLAGS) -o $(PRESTO)/bin/$@ mpiprepsubband_cmd.o mpiprepsubband_utils.o mpiprepsubband.o $(INSTRUMENTOBJS) $(PRESTOLINK) -lcfitsio -lm
+#	mpicc $(CLINKFLAGS) -o $(BASE)/bin/$@ mpiprepsubband_cmd.o mpiprepsubband_utils.o mpiprepsubband.o $(INSTRUMENTOBJS) $(BASELINK) -lcfitsio -lm
 
 accelsearch: accelsearch_cmd.c accelsearch_cmd.o accel_utils.o accelsearch.o zapping.o libpresto
-	$(CC) $(CLINKFLAGS) $(OMPFLAGS) -o $(PRESTO)/bin/$@ accelsearch_cmd.o accel_utils.o accelsearch.o zapping.o $(PRESTOLINK) $(GLIBLINK) -lm
+	$(CC) $(CLINKFLAGS) $(OMPFLAGS) -o $(BASE)/bin/$@ accelsearch_cmd.o accel_utils.o accelsearch.o zapping.o $(BASELINK) $(GLIBLINK) -lm
 
 bary: bary.o libpresto
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ bary.o $(PRESTOLINK) -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ bary.o $(BASELINK) -lm
 
 bincand: bincand_cmd.c bincand_cmd.o bincand.o libpresto
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ bincand.o bincand_cmd.o $(PRESTOLINK) -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ bincand.o bincand_cmd.o $(BASELINK) -lm
 
 dftfold: dftfold_cmd.c dftfold_cmd.o dftfold.o libpresto
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ dftfold.o dftfold_cmd.o $(PRESTOLINK) -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ dftfold.o dftfold_cmd.o $(BASELINK) -lm
 
 shiftdata: shiftdata.o
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ shiftdata.o -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ shiftdata.o -lm
 
 patchdata: patchdata.o
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ patchdata.o
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ patchdata.o
 
 dat2sdat: dat2sdat.o libpresto
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ dat2sdat.o $(PRESTOLINK) -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ dat2sdat.o $(BASELINK) -lm
 
 sdat2dat: sdat2dat.o libpresto
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ sdat2dat.o $(PRESTOLINK) -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ sdat2dat.o $(BASELINK) -lm
 
 check_parkes_raw: check_parkes_raw.o multibeam.o libpresto
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ check_parkes_raw.o multibeam.o $(PRESTOLINK) -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ check_parkes_raw.o multibeam.o $(BASELINK) -lm
 
 downsample: downsample_cmd.c downsample.o downsample_cmd.o libpresto
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ downsample.o downsample_cmd.o $(PRESTOLINK) -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ downsample.o downsample_cmd.o $(BASELINK) -lm
 
 split_parkes_beams: split_parkes_beams.o
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ split_parkes_beams.o
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ split_parkes_beams.o
 
 test_multifiles: test_multifiles.o libpresto
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ test_multifiles.o $(PRESTOLINK) -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ test_multifiles.o $(BASELINK) -lm
 
 rfifind: rfifind_cmd.c rfifind_cmd.o rfifind.o rfi_utils.o rfifind_plot.o $(INSTRUMENTOBJS) $(PLOT2DOBJS) libpresto
-	$(FC) $(FLINKFLAGS) -o $(PRESTO)/bin/$@  $(INSTRUMENTOBJS) $(PLOT2DOBJS) rfifind.o rfi_utils.o rfifind_cmd.o rfifind_plot.o $(PRESTOLINK) $(PGPLOTLINK) -lcfitsio -lm
+	$(FC) $(FLINKFLAGS) -o $(BASE)/bin/$@  $(INSTRUMENTOBJS) $(PLOT2DOBJS) rfifind.o rfi_utils.o rfifind_cmd.o rfifind_plot.o $(BASELINK) $(PGPLOTLINK) -lcfitsio -lm
 
 prepdata: prepdata_cmd.c prepdata_cmd.o prepdata.o $(INSTRUMENTOBJS) libpresto
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ prepdata.o prepdata_cmd.o $(INSTRUMENTOBJS) $(PRESTOLINK) -lcfitsio -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)$@ prepdata.o prepdata_cmd.o $(INSTRUMENTOBJS) $(BASELINK) -lcfitsio -lm
 
 prepsubband: prepsubband_cmd.c prepsubband_cmd.o prepsubband.o $(INSTRUMENTOBJS) libpresto
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ prepsubband.o prepsubband_cmd.o $(INSTRUMENTOBJS) $(PRESTOLINK) -lcfitsio -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ prepsubband.o prepsubband_cmd.o $(INSTRUMENTOBJS) $(BASELINK) -lcfitsio -lm
 
 prepfold: prepfold_cmd.c prepfold_cmd.o prepfold.o prepfold_utils.o prepfold_plot.o least_squares.o polycos.o readpar.o $(INSTRUMENTOBJS) $(PLOT2DOBJS) libpresto
-	$(FC) $(FLINKFLAGS) -o $(PRESTO)/bin/$@ prepfold.o prepfold_utils.o prepfold_plot.o prepfold_cmd.o least_squares.o polycos.o readpar.o $(PLOT2DOBJS) $(INSTRUMENTOBJS) $(LAPACKLINK) $(PRESTOLINK) $(PGPLOTLINK) -lcfitsio -lm
+	$(FC) $(FLINKFLAGS) -o $(BASE)$@ prepfold.o prepfold_utils.o prepfold_plot.o prepfold_cmd.o least_squares.o polycos.o readpar.o $(PLOT2DOBJS) $(INSTRUMENTOBJS) $(LAPACKLINK) $(BASELINK) $(PGPLOTLINK) -lcfitsio -lm
 
 maskdata: prepfold_cmd.c prepdata_cmd.o mask_data.o $(INSTRUMENTOBJS) libpresto
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ mask_data.o prepdata_cmd.o $(INSTRUMENTOBJS) $(PRESTOLINK) -lcfitsio -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)$@ mask_data.o prepdata_cmd.o $(INSTRUMENTOBJS) $(BASELINK) -lcfitsio -lm
 
 dump_spigot_zerolag: dump_spigot_zerolag.o spigot.o libpresto
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ dump_spigot_zerolag.o spigot.o $(PRESTOLINK) -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ dump_spigot_zerolag.o spigot.o $(BASELINK) -lm
 
 spigot2filterbank: spigot2filterbank_cmd.c spigot2filterbank_cmd.o spigot2filterbank.o spigot.o sigproc_fb.o sla.o libpresto
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ spigot2filterbank.o spigot.o sigproc_fb.o spigot2filterbank_cmd.o sla.o $(PRESTOLINK) -lsla -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ spigot2filterbank.o spigot.o sigproc_fb.o spigot2filterbank_cmd.o sla.o $(BASELINK) -lsla -lm
 
 GBT350filterbank: GBT350filterbank.o spigot.o sigproc_fb.o libpresto
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ GBT350filterbank.o spigot.o sigproc_fb.o $(PRESTOLINK) -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ GBT350filterbank.o spigot.o sigproc_fb.o $(BASELINK) -lm
 
 spigotSband2filterbank: spigotSband2filterbank.o spigot.o sigproc_fb.o libpresto
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ spigotSband2filterbank.o spigot.o sigproc_fb.o $(PRESTOLINK) -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ spigotSband2filterbank.o spigot.o sigproc_fb.o $(BASELINK) -lm
 
 show_pfd: show_pfd_cmd.c show_pfd.o show_pfd_cmd.o prepfold_utils.o prepfold_plot.o least_squares.o $(PLOT2DOBJS) libpresto
-	$(FC) $(FLINKFLAGS) -o $(PRESTO)/bin/$@ show_pfd.o show_pfd_cmd.o prepfold_utils.o prepfold_plot.o least_squares.o $(PLOT2DOBJS) $(LAPACKLINK) $(PRESTOLINK) $(PGPLOTLINK) -lm
+	$(FC) $(FLINKFLAGS) -o $(BASE)/bin/$@ show_pfd.o show_pfd_cmd.o prepfold_utils.o prepfold_plot.o least_squares.o $(PLOT2DOBJS) $(LAPACKLINK) $(BASELINK) $(PGPLOTLINK) -lm
 
 makedata: com.o randlib.o makedata.o libpresto
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ com.o randlib.o makedata.o $(PRESTOLINK) -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ com.o randlib.o makedata.o $(BASELINK) -lm
 
 makeinf: makeinf.o ioinf.o libpresto
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ makeinf.o ioinf.o $(PRESTOLINK) -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ makeinf.o ioinf.o $(BASELINK) -lm
 
 mjd2cal: djcl.o mjd2cal.o
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ djcl.o mjd2cal.o -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ djcl.o mjd2cal.o -lm
 
 cal2mjd: cldj.o cal2mjd.o
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ cldj.o cal2mjd.o -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ cldj.o cal2mjd.o -lm
 
 plotbincand: plotbincand.o $(PLOT2DOBJS) libpresto
-	$(FC) $(FLINKFLAGS) -o $(PRESTO)/bin/$@ $(PLOT2DOBJS) plotbincand.o $(PRESTOLINK) $(PGPLOTLINK) -lm
+	$(FC) $(FLINKFLAGS) -o $(BASE)/bin/$@ $(PLOT2DOBJS) plotbincand.o $(BASELINK) $(PGPLOTLINK) -lm
 
 profile: profile_cmd.c profile_cmd.o profile.o $(PLOT2DOBJS) libpresto
-	$(FC) $(FLINKFLAGS) -o $(PRESTO)/bin/$@ $(PLOT2DOBJS) profile.o profile_cmd.o $(PRESTOLINK) $(PGPLOTLINK) -lm
+	$(FC) $(FLINKFLAGS) -o $(BASE)/bin/$@ $(PLOT2DOBJS) profile.o profile_cmd.o $(BASELINK) $(PGPLOTLINK) -lm
 
 psrorbit: psrorbit.o $(PLOT2DOBJS) libpresto
-	$(FC) $(FLINKFLAGS) -o $(PRESTO)/bin/$@ $(PLOT2DOBJS) psrorbit.o $(PRESTOLINK) $(PGPLOTLINK) -lm
+	$(FC) $(FLINKFLAGS) -o $(BASE)/bin/$@ $(PLOT2DOBJS) psrorbit.o $(BASELINK) $(PGPLOTLINK) -lm
 
 testbinresp: testbinresp.o $(PLOT2DOBJS) libpresto
-	$(FC) $(FLINKFLAGS) -o $(PRESTO)/bin/$@ testbinresp.o $(PLOT2DOBJS) $(PGPLOTLINK) $(PRESTOLINK) -lm
+	$(FC) $(FLINKFLAGS) -o $(BASE)/bin/$@ testbinresp.o $(PLOT2DOBJS) $(PGPLOTLINK) $(BASELINK) -lm
 
 quicklook: quicklook.o libpresto
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ quicklook.o $(PRESTOLINK) -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ quicklook.o $(BASELINK) -lm
 
 readfile: readfile_cmd.c readfile_cmd.o readfile.o $(READFILEOBJS) libpresto
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ readfile.o readfile_cmd.o $(READFILEOBJS) $(PRESTOLINK) -lcfitsio -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ readfile.o readfile_cmd.o $(READFILEOBJS) $(BASELINK) -lcfitsio -lm
 
 realfft: realfft_cmd.c realfft_cmd.o realfft.o libpresto
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ realfft.o realfft_cmd.o $(PRESTOLINK) -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ realfft.o realfft_cmd.o $(BASELINK) -lm
 
 rednoise: rednoise_cmd.c rednoise.o rednoise_cmd.o libpresto
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ rednoise.o rednoise_cmd.o $(PRESTOLINK) -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ rednoise.o rednoise_cmd.o $(BASELINK) -lm
 
 search_bin: search_bin_cmd.c search_bin_cmd.o search_bin.o libpresto
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ search_bin.o search_bin_cmd.o $(PRESTOLINK) -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ search_bin.o search_bin_cmd.o $(BASELINK) -lm
 
 taperaw: taperaw.o
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ taperaw.o
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ taperaw.o
 
 toas2dat: toas2dat_cmd.c toas2dat_cmd.o toas2dat.o
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ toas2dat.o toas2dat_cmd.o
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ toas2dat.o toas2dat_cmd.o
 
 un_sc_td:
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ un_sc_td.c
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ un_sc_td.c
 
 swap_endian:
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ swap_endian.c
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ swap_endian.c
 
 window: window.o $(PLOT2DOBJS) libpresto
-	$(FC) $(FLINKFLAGS) -o $(PRESTO)/bin/$@ $(PLOT2DOBJS) window.o $(PRESTOLINK) $(PGPLOTLINK) -lm
+	$(FC) $(FLINKFLAGS) -o $(BASE)/bin/$@ $(PLOT2DOBJS) window.o $(BASELINK) $(PGPLOTLINK) -lm
 
 zapbirds: zapbirds_cmd.c zapbirds_cmd.o zapbirds.o zapping.o $(PLOT2DOBJS) libpresto
-	$(FC) $(FLINKFLAGS) -o $(PRESTO)/bin/$@ zapbirds_cmd.o zapbirds.o zapping.o $(PLOT2DOBJS) $(PRESTOLINK) $(PGPLOTLINK) $(GLIBLINK) -lm
+	$(FC) $(FLINKFLAGS) -o $(BASE)/bin/$@ zapbirds_cmd.o zapbirds.o zapping.o $(PLOT2DOBJS) $(BASELINK) $(PGPLOTLINK) $(GLIBLINK) -lm
 
 explorefft: explorefft.o $(PLOT2DOBJS) libpresto
-	$(FC) $(FLINKFLAGS) -o $(PRESTO)/bin/$@ explorefft.o $(PLOT2DOBJS) $(PRESTOLINK) $(PGPLOTLINK) -lm
+	$(FC) $(FLINKFLAGS) -o $(BASE)/bin/$@ explorefft.o $(PLOT2DOBJS) $(BASELINK) $(PGPLOTLINK) -lm
 
 exploredat: exploredat.o $(PLOT2DOBJS) libpresto
-	$(FC) $(FLINKFLAGS) -o $(PRESTO)/bin/$@ exploredat.o $(PLOT2DOBJS) $(PRESTOLINK) $(PGPLOTLINK) -lm
+	$(FC) $(FLINKFLAGS) -o $(BASE)/bin/$@ exploredat.o $(PLOT2DOBJS) $(BASELINK) $(PGPLOTLINK) -lm
 
 weight_psrfits: weight_psrfits.o $(INSTRUMENTOBJS) libpresto
-	$(FC) $(FLINKFLAGS) -o $(PRESTO)/bin/$@ weight_psrfits.o $(INSTRUMENTOBJS) $(PRESTOLINK)
+	$(FC) $(FLINKFLAGS) -o $(BASE)/bin/$@ weight_psrfits.o $(INSTRUMENTOBJS) $(BASELINK)
 
 psrfits_dumparrays: psrfits_dumparrays.o
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ psrfits_dumparrays.o $(CFITSIOLINK) -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ psrfits_dumparrays.o $(CFITSIOLINK) -lm
 
 fitsdelrow: fitsdelrow.o
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ fitsdelrow.o $(CFITSIOLINK) -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ fitsdelrow.o $(CFITSIOLINK) -lm
 
 fitsdelcol: fitsdelcol.o
-	$(CC) $(CLINKFLAGS) -o $(PRESTO)/bin/$@ fitsdelcol.o $(CFITSIOLINK) -lm
+	$(CC) $(CLINKFLAGS) -o $(BASE)/bin/$@ fitsdelcol.o $(CFITSIOLINK) -lm
 
 clean:
 	rm -f *.o *~ *#
-	rm -f slalib/*.o slalib/sla_test
+#	rm -f slalib/*.o slalib/sla_test
 
 cleaner: clean
 	cd ../bin ; rm -f $(BINARIES)
-	rm -f $(PRESTO)/lib/libpresto.* $(PRESTO)/lib/libsla.*
+	rm -f $(BASE)/lib/libpresto.* $(BASE)/lib/libsla.*
 
 squeaky:  cleaner
 	rm -f *.dat *.fft *.inf fftw_wisdom.txt
 	rm -f core *.win* *.ps *_rzw *.tmp
-	cd $(PRESTO)/clig ; rm -f *# *~
-	cd $(PRESTO)/docs ; rm -f *# *~
-	cd $(PRESTO)/python ; rm -f *# *~ *.o *.pyc *.pyo
-	cd $(PRESTO)/include ; rm -f *# *~
+	cd $(BASE)/clig ; rm -f *# *~
+	cd $(BASE)/docs ; rm -f *# *~
+	cd $(BASE)/python ; rm -f *# *~ *.o *.pyc *.pyo
+	cd $(BASE)/include ; rm -f *# *~
